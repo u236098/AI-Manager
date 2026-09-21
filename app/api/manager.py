@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.auth import get_creator_id
 from app.models.manager import (
     DailyBrief, WeeklyReview, Recommendation, ManagerMemory, ManagerConfig,
 )
@@ -13,7 +14,7 @@ router = APIRouter()
 
 
 @router.get("/brief/today")
-async def todays_brief(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def todays_brief(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     """Get or generate today's daily brief."""
     today = date.today()
     result = await db.execute(
@@ -37,7 +38,7 @@ async def todays_brief(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/brief/weekly")
-async def latest_weekly_review(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def latest_weekly_review(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(WeeklyReview)
         .where(WeeklyReview.creator_id == creator_id)
@@ -59,7 +60,7 @@ async def latest_weekly_review(creator_id: int = 1, db: AsyncSession = Depends(g
 
 
 @router.post("/analyze")
-async def run_analysis(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def run_analysis(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     """Run the full analysis loop: analyze performance → create observations → recommend."""
     from app.services.analysis import run_analysis_loop
     return await run_analysis_loop(creator_id, db)
@@ -80,7 +81,7 @@ async def run_ig_analysis(account_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/analyze/cross-platform")
-async def run_cross_platform(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def run_cross_platform(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     """Cross-platform content theme comparison."""
     from app.services.analysis import run_cross_platform_analysis
     return await run_cross_platform_analysis(creator_id, db)
@@ -88,7 +89,7 @@ async def run_cross_platform(creator_id: int = 1, db: AsyncSession = Depends(get
 
 @router.get("/recommendations")
 async def list_recommendations(
-    creator_id: int = 1,
+    creator_id: int = Depends(get_creator_id),
     status: str = "pending",
     db: AsyncSession = Depends(get_db),
 ):
@@ -171,7 +172,7 @@ async def score_recommendation_endpoint(
 
 
 @router.get("/memory")
-async def list_memories(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def list_memories(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(ManagerMemory)
         .where(ManagerMemory.creator_id == creator_id, ManagerMemory.is_active == True)
@@ -195,7 +196,7 @@ async def list_memories(creator_id: int = 1, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/config")
-async def get_config(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def get_config(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(ManagerConfig).where(ManagerConfig.creator_id == creator_id)
     )

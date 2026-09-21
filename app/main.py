@@ -2,8 +2,12 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mcp.server.streamable_http_manager import StreamableHTTPASGIApp
 
 from app.api import auth, accounts, posts, analytics, content, manager, brand, dashboard
+from app.auth import MCPAuthMiddleware
+from app.config import get_settings
+from app.database import _get_session_factory
 from app.mcp import mcp as mcp_server
 
 _mcp_http_app = mcp_server.streamable_http_app(
@@ -21,13 +25,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Kobby Manager",
     description="Deterministic analytics platform for Kobby Cooper",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
+settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=[o.strip() for o in settings.allowed_origins.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,8 +47,8 @@ app.include_router(manager.router, prefix="/api/manager", tags=["manager"])
 app.include_router(brand.router, prefix="/api/brand", tags=["brand"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 
-from mcp.server.streamable_http_manager import StreamableHTTPASGIApp
-app.mount("/mcp", StreamableHTTPASGIApp(mcp_server.session_manager))
+mcp_asgi = StreamableHTTPASGIApp(mcp_server.session_manager)
+app.mount("/mcp", MCPAuthMiddleware(mcp_asgi, _get_session_factory()))
 
 
 @app.get("/api/health")

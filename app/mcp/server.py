@@ -1,13 +1,15 @@
 """MCP server for Kobby Manager.
 
 Exposes read-only tools that let ChatGPT (or any MCP client) query the
-creator's real Instagram and TikTok performance data.
+creator's real Instagram and TikTok performance data. Creator identity
+is resolved from the authenticated JWT via creator_id_var.
 """
 from contextlib import asynccontextmanager
 
 from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
+from app.auth import creator_id_var
 from app.database import _get_session_factory
 
 READ_ONLY = ToolAnnotations(
@@ -38,9 +40,9 @@ async def get_db():
             await session.close()
 
 
-# ---------------------------------------------------------------------------
-# Tool 1: get_creator_overview
-# ---------------------------------------------------------------------------
+def _cid() -> int:
+    return creator_id_var.get() or 1
+
 
 @mcp.tool(annotations=READ_ONLY)
 async def get_creator_overview() -> dict:
@@ -50,12 +52,8 @@ async def get_creator_overview() -> dict:
     from app.services.dashboard import get_creator_overview as _get
 
     async with get_db() as db:
-        return await _get(db)
+        return await _get(db, creator_id=_cid())
 
-
-# ---------------------------------------------------------------------------
-# Tool 2: get_accounts
-# ---------------------------------------------------------------------------
 
 @mcp.tool(annotations=READ_ONLY)
 async def get_accounts() -> dict:
@@ -64,12 +62,8 @@ async def get_accounts() -> dict:
     from app.services.dashboard import get_accounts as _get
 
     async with get_db() as db:
-        return await _get(db)
+        return await _get(db, creator_id=_cid())
 
-
-# ---------------------------------------------------------------------------
-# Tool 3: get_recent_performance
-# ---------------------------------------------------------------------------
 
 @mcp.tool(annotations=READ_ONLY)
 async def get_recent_performance(
@@ -85,12 +79,8 @@ async def get_recent_performance(
     from app.services.dashboard import get_recent_performance as _get
 
     async with get_db() as db:
-        return await _get(db, platform=platform, days=days)
+        return await _get(db, creator_id=_cid(), platform=platform, days=days)
 
-
-# ---------------------------------------------------------------------------
-# Tool 4: get_content_themes
-# ---------------------------------------------------------------------------
 
 @mcp.tool(annotations=READ_ONLY)
 async def get_content_themes(
@@ -105,12 +95,8 @@ async def get_content_themes(
     from app.services.dashboard import get_content_themes as _get
 
     async with get_db() as db:
-        return await _get(db, platform=platform)
+        return await _get(db, creator_id=_cid(), platform=platform)
 
-
-# ---------------------------------------------------------------------------
-# Tool 5: get_top_posts
-# ---------------------------------------------------------------------------
 
 @mcp.tool(annotations=READ_ONLY)
 async def get_top_posts(
@@ -133,14 +119,10 @@ async def get_top_posts(
 
     async with get_db() as db:
         return await _get(
-            db, platform=platform, metric=metric,
+            db, creator_id=_cid(), platform=platform, metric=metric,
             limit=limit, content_theme=content_theme,
         )
 
-
-# ---------------------------------------------------------------------------
-# Tool 6: get_post_details
-# ---------------------------------------------------------------------------
 
 @mcp.tool(annotations=READ_ONLY)
 async def get_post_details(post_id: int) -> dict:
@@ -155,10 +137,6 @@ async def get_post_details(post_id: int) -> dict:
     async with get_db() as db:
         return await _get(db, post_id)
 
-
-# ---------------------------------------------------------------------------
-# Tool 7: get_manager_memory
-# ---------------------------------------------------------------------------
 
 @mcp.tool(annotations=READ_ONLY)
 async def get_manager_memory(
@@ -178,14 +156,10 @@ async def get_manager_memory(
 
     async with get_db() as db:
         return await _get(
-            db, knowledge_type=knowledge_type,
+            db, creator_id=_cid(), knowledge_type=knowledge_type,
             platform=platform, limit=limit,
         )
 
-
-# ---------------------------------------------------------------------------
-# Tool 8: search_posts
-# ---------------------------------------------------------------------------
 
 @mcp.tool(annotations=READ_ONLY)
 async def search_posts(
@@ -211,7 +185,7 @@ async def search_posts(
 
     async with get_db() as db:
         return await _get(
-            db, query=query, platform=platform,
+            db, creator_id=_cid(), query=query, platform=platform,
             theme=theme, min_views=min_views,
             min_likes=min_likes, limit=limit,
         )

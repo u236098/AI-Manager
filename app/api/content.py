@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.auth import get_creator_id
 from app.models.content import ContentIdea, ContentCalendar, ContentSeries, Hook
 
 router = APIRouter()
@@ -12,7 +13,7 @@ router = APIRouter()
 
 @router.get("/ideas")
 async def list_ideas(
-    creator_id: int = 1,
+    creator_id: int = Depends(get_creator_id),
     status: str | None = None,
     limit: int = 20,
     db: AsyncSession = Depends(get_db),
@@ -40,7 +41,7 @@ async def list_ideas(
 
 @router.get("/calendar")
 async def get_calendar(
-    creator_id: int = 1,
+    creator_id: int = Depends(get_creator_id),
     start: date | None = None,
     end: date | None = None,
     db: AsyncSession = Depends(get_db),
@@ -70,7 +71,7 @@ async def get_calendar(
 
 
 @router.get("/series")
-async def list_series(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def list_series(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(ContentSeries)
         .where(ContentSeries.creator_id == creator_id)
@@ -91,7 +92,7 @@ async def list_series(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/hooks")
-async def list_hooks(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def list_hooks(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Hook)
         .where(Hook.creator_id == creator_id)

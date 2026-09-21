@@ -5,6 +5,7 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.auth import get_creator_id
 from app.models.core import (
     PlatformAccount, Post, PostMetric, PostType, Platform,
     AccountMetricSnapshot, ProfileSnapshot,
@@ -15,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/overview")
-async def dashboard_overview(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def dashboard_overview(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     accounts_result = await db.execute(
         select(PlatformAccount).where(
             PlatformAccount.creator_id == creator_id,
@@ -129,7 +130,7 @@ async def dashboard_overview(creator_id: int = 1, db: AsyncSession = Depends(get
 @router.get("/posts-with-metrics")
 async def posts_with_metrics(
     account_id: int | None = None,
-    creator_id: int = 1,
+    creator_id: int = Depends(get_creator_id),
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
@@ -170,7 +171,7 @@ async def posts_with_metrics(
 
 
 @router.get("/content-themes")
-async def content_themes(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def content_themes(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     """Return content cluster performance for the content winners card."""
     memories = (
         await db.scalars(
@@ -207,7 +208,7 @@ async def content_themes(creator_id: int = 1, db: AsyncSession = Depends(get_db)
 @router.get("/performance-timeline")
 async def performance_timeline(
     account_id: int | None = None,
-    creator_id: int = 1,
+    creator_id: int = Depends(get_creator_id),
     db: AsyncSession = Depends(get_db),
 ):
     """Monthly aggregated performance for the chart."""

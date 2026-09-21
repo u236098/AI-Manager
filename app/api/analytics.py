@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.auth import get_creator_id
 from app.models.core import AccountMetricSnapshot, PostMetric
 from app.models.analytics import Experiment, PostingTimeAnalysis
 
@@ -67,7 +68,7 @@ async def post_metrics(post_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/experiments")
-async def list_experiments(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def list_experiments(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Experiment)
         .where(Experiment.creator_id == creator_id)

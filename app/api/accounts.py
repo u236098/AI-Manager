@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.auth import get_creator_id
 from app.models.core import PlatformAccount, ProfileSnapshot
 from app.services.sync import sync_account, enrich_ig_insights
 
@@ -10,8 +11,13 @@ router = APIRouter()
 
 
 @router.get("/")
-async def list_accounts(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(PlatformAccount).where(PlatformAccount.is_active == True))
+async def list_accounts(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(PlatformAccount).where(
+            PlatformAccount.creator_id == creator_id,
+            PlatformAccount.is_active == True,
+        )
+    )
     accounts = result.scalars().all()
     return [
         {

@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     # Base URL for OAuth callbacks (no trailing slash)
     base_url: str = "http://localhost:8000"
 
+    # Clerk auth (leave empty to disable auth in local dev)
+    clerk_secret_key: str = ""
+    clerk_publishable_key: str = ""
+    clerk_jwks_url: str = ""
+
+    # Comma-separated allowed CORS origins (production)
+    allowed_origins: str = "http://localhost:3000,http://localhost:5173"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
     @property

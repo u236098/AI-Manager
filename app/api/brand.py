@@ -3,13 +3,14 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.auth import get_creator_id
 from app.models.brand import BrandStrategy, ProfileScore, ProfileExperiment, PinRecommendation
 
 router = APIRouter()
 
 
 @router.get("/strategy")
-async def get_strategy(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
+async def get_strategy(creator_id: int = Depends(get_creator_id), db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(BrandStrategy).where(BrandStrategy.creator_id == creator_id)
     )
