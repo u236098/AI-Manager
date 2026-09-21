@@ -55,19 +55,6 @@ async def profile_scores(account_id: int, db: AsyncSession = Depends(get_db)):
     ]
 
 
-@router.post("/profile-scores/{account_id}/generate")
-async def generate_profile_score(account_id: int, creator_id: int = 1, db: AsyncSession = Depends(get_db)):
-    """Ask the Brand Agent to score the current profile."""
-    from app.agents.brand import BrandAgent
-    agent = BrandAgent(creator_id)
-    result = await agent.run(
-        "Score the current profile across all dimensions: recognition, niche clarity, "
-        "follow proposition, cross-platform consistency, social proof, pinned content, "
-        "grid quality. Provide specific improvement recommendations for each dimension."
-    )
-    return result
-
-
 @router.get("/pin-recommendations/{account_id}")
 async def pin_recommendations(account_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(

@@ -2,13 +2,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.routing import Mount
 
 from app.api import auth, accounts, posts, analytics, content, manager, brand, dashboard
 from app.mcp import mcp as mcp_server
 
-# Create the Streamable HTTP app (this also initializes the session manager)
-_mcp_http_app = mcp_server.streamable_http_app(streamable_http_path="/")
+_mcp_http_app = mcp_server.streamable_http_app(
+    streamable_http_path="/",
+    stateless_http=True,
+)
 
 
 @asynccontextmanager
@@ -19,8 +20,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Kobby Manager",
-    description="AI Talent Manager for Kobby Cooper",
-    version="0.1.0",
+    description="Deterministic analytics platform for Kobby Cooper",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -41,7 +42,6 @@ app.include_router(manager.router, prefix="/api/manager", tags=["manager"])
 app.include_router(brand.router, prefix="/api/brand", tags=["brand"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 
-# Mount the MCP ASGI handler at /mcp (session manager lifespan managed above)
 from mcp.server.streamable_http_manager import StreamableHTTPASGIApp
 app.mount("/mcp", StreamableHTTPASGIApp(mcp_server.session_manager))
 

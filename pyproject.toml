@@ -15,16 +15,13 @@ dependencies = [
     "python-multipart>=0.0.18",
     "tenacity>=9.0",
     "mcp>=2.0",
+    "cryptography>=44.0",
 ]
 
 [tool.setuptools.packages.find]
 include = ["app*"]
 
 [project.optional-dependencies]
-ai = [
-    "anthropic>=0.40",
-    "openai>=1.55",
-]
 video = [
     "ffmpeg-python>=0.2",
     "whisper-timestamped>=1.15",
@@ -46,7 +43,7 @@ dev = [
     "aiosqlite>=0.21",
 ]
 all = [
-    "kobby-manager[ai,video,worker,auth]",
+    "kobby-manager[video,worker,auth]",
 ]
 
 [tool.pytest.ini_options]

@@ -6,3 +6,4 @@ from app.models.brand import *
 from app.models.business import *
 from app.models.intelligence import *
 from app.models.manager import *
+from app.models.oauth import *

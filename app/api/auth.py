@@ -17,15 +17,23 @@ from app.services.oauth_state import generate_state, validate_state
 router = APIRouter()
 
 
+def _redirect_uri(provider: str) -> str:
+    from app.config import get_settings
+    return f"{get_settings().base_url}/api/auth/{provider}/callback"
+
+
 @router.get("/instagram/connect")
-async def instagram_auth_url(creator_id: int = Query(..., ge=1)):
+async def instagram_auth_url(
+    creator_id: int = Query(..., ge=1),
+    db: AsyncSession = Depends(get_db),
+):
     """Build Meta's current Facebook Login for Business Instagram onboarding URL."""
     from app.config import get_settings
 
     s = get_settings()
     state = generate_state()
-    put_oauth_session(state, provider="instagram", creator_id=creator_id)
-    redirect_uri = "http://localhost:8000/api/auth/instagram/callback"
+    await put_oauth_session(state, db, provider="instagram", creator_id=creator_id)
+    redirect_uri = _redirect_uri("instagram")
     scope = ",".join(
         [
             "instagram_basic",
@@ -49,11 +57,7 @@ async def instagram_auth_url(creator_id: int = Query(..., ge=1)):
 
 @router.get("/instagram/callback", response_class=HTMLResponse)
 async def instagram_callback_page():
-    """Browser bridge for Meta's implicit response, whose tokens arrive in #fragment.
-
-    URL fragments are never sent to FastAPI, so this tiny local page reads the
-    fragment in the browser and POSTs the token + state to /instagram/complete.
-    """
+    """Browser bridge for Meta's implicit response, whose tokens arrive in #fragment."""
     return HTMLResponse(
         """<!doctype html>
 <html><head><meta charset="utf-8"><title>Kobby Manager — Instagram</title></head>
@@ -96,7 +100,7 @@ class InstagramComplete(BaseModel):
 async def instagram_complete(payload: InstagramComplete, db: AsyncSession = Depends(get_db)):
     if not validate_state(payload.state):
         raise HTTPException(403, "Invalid or expired OAuth state — possible CSRF attack")
-    session = pop_oauth_session(payload.state)
+    session = await pop_oauth_session(payload.state, db)
     if not session or session.get("provider") != "instagram":
         raise HTTPException(403, "OAuth transaction is missing, expired, or already used")
 
@@ -106,7 +110,10 @@ async def instagram_complete(payload: InstagramComplete, db: AsyncSession = Depe
 
 
 @router.get("/tiktok/connect")
-async def tiktok_auth_url(creator_id: int = Query(..., ge=1)):
+async def tiktok_auth_url(
+    creator_id: int = Query(..., ge=1),
+    db: AsyncSession = Depends(get_db),
+):
     """Build TikTok Desktop OAuth URL using PKCE as required by the sandbox setup."""
     from app.config import get_settings
 
@@ -114,13 +121,14 @@ async def tiktok_auth_url(creator_id: int = Query(..., ge=1)):
     state = generate_state()
     code_verifier = secrets.token_urlsafe(64)[:96]
     code_challenge = hashlib.sha256(code_verifier.encode()).hexdigest()
-    put_oauth_session(
+    await put_oauth_session(
         state,
+        db,
         provider="tiktok",
         creator_id=creator_id,
         code_verifier=code_verifier,
     )
-    redirect_uri = "http://localhost:8000/api/auth/tiktok/callback"
+    redirect_uri = _redirect_uri("tiktok")
     params = {
         "client_key": s.tiktok_client_key,
         "redirect_uri": redirect_uri,
@@ -142,7 +150,7 @@ async def tiktok_callback(
 ):
     if not validate_state(state):
         raise HTTPException(403, "Invalid or expired OAuth state — possible CSRF attack")
-    session = pop_oauth_session(state)
+    session = await pop_oauth_session(state, db)
     if not session or session.get("provider") != "tiktok":
         raise HTTPException(403, "OAuth transaction is missing, expired, or already used")
 

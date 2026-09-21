@@ -25,6 +25,8 @@ HASHTAG_RE = re.compile(r"#(\w+)")
 
 
 async def _fetch_all_tiktok_videos(account: PlatformAccount) -> list[dict]:
+    from app.services.encryption import decrypt_token
+    token = decrypt_token(account.access_token)
     fields = (
         "id,title,video_description,create_time,duration,"
         "cover_image_url,share_url,like_count,comment_count,share_count,view_count"
@@ -38,7 +40,7 @@ async def _fetch_all_tiktok_videos(account: PlatformAccount) -> list[dict]:
                 body["cursor"] = cursor
             resp = await client.post(
                 f"{TIKTOK_API_URL}/video/list/",
-                headers={"Authorization": f"Bearer {account.access_token}"},
+                headers={"Authorization": f"Bearer {token}"},
                 params={"fields": fields},
                 json=body,
             )
@@ -54,10 +56,12 @@ async def _fetch_all_tiktok_videos(account: PlatformAccount) -> list[dict]:
 
 
 async def _fetch_tiktok_profile(account: PlatformAccount) -> dict:
+    from app.services.encryption import decrypt_token
+    token = decrypt_token(account.access_token)
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{TIKTOK_API_URL}/user/info/",
-            headers={"Authorization": f"Bearer {account.access_token}"},
+            headers={"Authorization": f"Bearer {token}"},
             params={
                 "fields": "open_id,display_name,username,follower_count,"
                 "following_count,likes_count,video_count,bio_description,"
@@ -194,26 +198,30 @@ MEDIA_TYPE_MAP = {
 
 
 async def _fetch_ig_profile(account: PlatformAccount) -> dict:
+    from app.services.encryption import decrypt_token
     graph = _graph_url()
+    token = decrypt_token(account.access_token)
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{graph}/{account.platform_user_id}",
             params={
                 "fields": "username,name,biography,profile_picture_url,followers_count,follows_count,media_count",
-                "access_token": account.access_token,
+                "access_token": token,
             },
         )
         return await _json_or_raise(resp)
 
 
 async def _fetch_all_ig_media(account: PlatformAccount) -> list[dict]:
+    from app.services.encryption import decrypt_token
     graph = _graph_url()
+    token = decrypt_token(account.access_token)
     media: list[dict] = []
     fields = "id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,permalink"
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{graph}/{account.platform_user_id}/media",
-            params={"fields": fields, "limit": 50, "access_token": account.access_token},
+            params={"fields": fields, "limit": 50, "access_token": token},
         )
         data = await _json_or_raise(resp)
         media.extend(data.get("data", []))
@@ -376,8 +384,9 @@ async def enrich_ig_insights(account_id: int, db: AsyncSession) -> dict:
         is_reel = post.post_type == PostType.REEL
 
         try:
+            from app.services.encryption import decrypt_token
             insights = await fetch_media_insights(
-                post.platform_post_id, account.access_token, is_reel=is_reel
+                post.platform_post_id, decrypt_token(account.access_token), is_reel=is_reel
             )
         except Exception as e:
             log.warning("Insights failed for post %s (%s): %s", post.platform_post_id, post.post_type.value, e)

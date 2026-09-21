@@ -6,20 +6,6 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://kobby:kobby@127.0.0.1:5432/kobby_manager"
     redis_url: str = "redis://localhost:6379/0"
 
-    # AI layer — OpenAI as sole provider, routed by cost tier
-    strategy_provider: str = "openai"
-    strategy_model: str = "gpt-5.6-sol"
-    analysis_provider: str = "openai"
-    analysis_model: str = "gpt-5.6-terra"
-    routine_provider: str = "openai"
-    routine_model: str = "gpt-5.6-luna"
-    vision_provider: str = "openai"
-    vision_model: str = "gpt-5.6-terra"
-    transcribe_model: str = "gpt-4o-transcribe"
-
-    anthropic_api_key: str = ""
-    openai_api_key: str = ""
-
     # platform credentials
     meta_app_id: str = ""
     meta_app_secret: str = ""
@@ -30,7 +16,33 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-in-production"
     oauth_state_ttl_seconds: int = 600
 
+    # Token encryption key (Fernet, 32-byte base64-encoded)
+    encryption_key: str = ""
+
+    # Base URL for OAuth callbacks (no trailing slash)
+    base_url: str = "http://localhost:8000"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    @property
+    def async_database_url(self) -> str:
+        """Ensure the URL uses the asyncpg driver."""
+        url = self.database_url
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif url.startswith("postgresql://"):
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url
+
+    @property
+    def sync_database_url(self) -> str:
+        """Sync URL for Alembic migrations."""
+        url = self.database_url
+        if "+asyncpg" in url:
+            url = url.replace("+asyncpg", "", 1)
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
+        return url
 
 
 @lru_cache

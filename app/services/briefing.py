@@ -1,15 +1,15 @@
-"""Daily and weekly briefing generation."""
+"""Briefing context gathering — deterministic data assembly for daily/weekly briefs."""
 from __future__ import annotations
 from datetime import date, timedelta
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.core import Post, PostMetric, AccountMetricSnapshot, PlatformAccount
-from app.models.content import ContentCalendar, ContentIdea
-from app.models.manager import DailyBrief, Recommendation, ManagerMemory
+from app.models.core import Post, PlatformAccount, AccountMetricSnapshot
+from app.models.content import ContentCalendar
+from app.models.manager import Recommendation, ManagerMemory
 from app.models.brand import BrandStrategy
 
 
-async def _gather_brief_context(creator_id: int, db: AsyncSession) -> dict:
+async def gather_brief_context(creator_id: int, db: AsyncSession) -> dict:
     today = date.today()
     week_ago = today - timedelta(days=7)
 
@@ -113,30 +113,4 @@ async def _gather_brief_context(creator_id: int, db: AsyncSession) -> dict:
             "strategic_priorities": strategy.strategic_priorities,
         } if strategy else None,
         "active_memories": active_memories,
-    }
-
-
-async def generate_daily_brief(creator_id: int, db: AsyncSession) -> dict:
-    context = await _gather_brief_context(creator_id, db)
-
-    from app.services.orchestrator import orchestrate_daily_brief
-    result = await orchestrate_daily_brief(context, db, creator_id)
-
-    brief = DailyBrief(
-        creator_id=creator_id,
-        date=date.today(),
-        summary=result.get("decision", ""),
-        actions=result.get("recommended_actions"),
-        full_brief=str(result),
-    )
-    db.add(brief)
-    await db.commit()
-
-    return {
-        "date": date.today().isoformat(),
-        "triggers": result.get("triggers", []),
-        "agents_consulted": result.get("agents_consulted", []),
-        "decision": result.get("decision", ""),
-        "recommended_actions": result.get("recommended_actions", []),
-        "confidence": result.get("confidence"),
     }

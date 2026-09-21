@@ -1,37 +1,36 @@
-"""Short-lived OAuth transaction storage for local development.
+"""DB-backed OAuth transaction storage — serverless-safe.
 
-Keeps PKCE verifiers and creator/provider context server-side, keyed by the
-HMAC-signed OAuth state value. This is intentionally process-local for the
-single-process local dev setup. Replace with Redis/DB before multi-worker or
-production deployment.
+Stores PKCE verifiers and OAuth context in the database, keyed by
+the HMAC-signed state parameter. Single-use: pop deletes the row.
 """
 from __future__ import annotations
-
-import time
 from typing import Any
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
-
-_sessions: dict[str, tuple[float, dict[str, Any]]] = {}
-
-
-def put_oauth_session(state: str, **data: Any) -> None:
-    _sessions[state] = (time.time(), data)
-    _prune()
+from app.models.oauth import OAuthTransaction
 
 
-def pop_oauth_session(state: str) -> dict[str, Any] | None:
-    item = _sessions.pop(state, None)
-    if item is None:
+async def put_oauth_session(state: str, db: AsyncSession, **data: Any) -> None:
+    txn = OAuthTransaction(
+        state=state,
+        provider=data.get("provider", ""),
+        data=data,
+    )
+    db.add(txn)
+    await db.commit()
+
+
+async def pop_oauth_session(state: str, db: AsyncSession) -> dict[str, Any] | None:
+    result = await db.execute(
+        select(OAuthTransaction).where(OAuthTransaction.state == state)
+    )
+    txn = result.scalar_one_or_none()
+    if txn is None:
         return None
-    created_at, data = item
-    if time.time() - created_at > get_settings().oauth_state_ttl_seconds:
-        return None
+    data = txn.data
+    await db.execute(
+        delete(OAuthTransaction).where(OAuthTransaction.state == state)
+    )
+    await db.commit()
     return data
-
-
-def _prune() -> None:
-    cutoff = time.time() - get_settings().oauth_state_ttl_seconds
-    stale = [key for key, (created_at, _) in _sessions.items() if created_at < cutoff]
-    for key in stale:
-        _sessions.pop(key, None)

@@ -98,6 +98,8 @@ async def connect_with_user_token(user_token: str, creator_id: int, db: AsyncSes
         )
         profile = await _json_or_raise(profile_resp)
 
+    from app.services.encryption import encrypt_token
+
     existing = await db.scalar(
         select(PlatformAccount).where(
             PlatformAccount.platform == Platform.INSTAGRAM,
@@ -109,7 +111,7 @@ async def connect_with_user_token(user_token: str, creator_id: int, db: AsyncSes
         account.creator_id = creator_id
         account.username = profile.get("username", account.username)
         account.display_name = profile.get("name")
-        account.access_token = user_token
+        account.access_token = encrypt_token(user_token)
         account.is_active = True
     else:
         account = PlatformAccount(
@@ -118,7 +120,7 @@ async def connect_with_user_token(user_token: str, creator_id: int, db: AsyncSes
             platform_user_id=ig_account_id,
             username=profile.get("username", ""),
             display_name=profile.get("name"),
-            access_token=user_token,
+            access_token=encrypt_token(user_token),
         )
         db.add(account)
 
@@ -135,13 +137,15 @@ async def connect_with_user_token(user_token: str, creator_id: int, db: AsyncSes
 
 
 async def fetch_media(account: PlatformAccount, limit: int = 50) -> list[dict]:
+    from app.services.encryption import decrypt_token
+    token = decrypt_token(account.access_token)
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{_graph_url()}/{account.platform_user_id}/media",
             params={
                 "fields": "id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,permalink",
                 "limit": limit,
-                "access_token": account.access_token,
+                "access_token": token,
             },
         )
         data = await _json_or_raise(resp)
@@ -170,13 +174,15 @@ async def fetch_media_insights(media_id: str, access_token: str, is_reel: bool =
 
 
 async def fetch_account_insights(account: PlatformAccount) -> dict:
+    from app.services.encryption import decrypt_token
+    token = decrypt_token(account.access_token)
     async with httpx.AsyncClient(timeout=30) as client:
         resp = await client.get(
             f"{_graph_url()}/{account.platform_user_id}/insights",
             params={
                 "metric": "reach,impressions,profile_views,follower_count",
                 "period": "day",
-                "access_token": account.access_token,
+                "access_token": token,
             },
         )
         data = await _json_or_raise(resp)

@@ -38,20 +38,6 @@ async def list_ideas(
     ]
 
 
-@router.post("/ideas/generate")
-async def generate_ideas(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
-    """Ask the Content Agent to generate new content ideas based on data."""
-    from app.agents.content import ContentAgent
-    agent = ContentAgent(creator_id)
-    result = await agent.run(
-        "Generate 5 content ideas for this week based on historical performance, "
-        "audience data, current trends, and content gaps. Each idea needs: title, concept, "
-        "why (data-driven reasoning), objective, suggested hook, estimated duration, "
-        "and target platform.",
-    )
-    return result
-
-
 @router.get("/calendar")
 async def get_calendar(
     creator_id: int = 1,

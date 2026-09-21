@@ -1,5 +1,5 @@
-"""Post management and video analysis endpoints."""
-from fastapi import APIRouter, Depends, UploadFile, File, Form
+"""Post management endpoints."""
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -54,14 +54,3 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.post("/draft-review")
-async def review_draft_video(
-    video: UploadFile = File(...),
-    objective: str = Form("reach"),
-    creator_id: int = Form(1),
-    db: AsyncSession = Depends(get_db),
-):
-    """Upload a draft video for AI review before posting."""
-    from app.services.video_analyzer import analyze_draft
-    result = await analyze_draft(video, objective, creator_id, db)
-    return result

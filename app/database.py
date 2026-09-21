@@ -14,7 +14,14 @@ def _get_engine():
     global _engine
     if _engine is None:
         from app.config import get_settings
-        _engine = create_async_engine(get_settings().database_url, echo=False)
+        settings = get_settings()
+        url = settings.async_database_url
+        connect_args = {}
+        if "neon" in url or "neon.tech" in url:
+            import ssl
+            ssl_ctx = ssl.create_default_context()
+            connect_args["ssl"] = ssl_ctx
+        _engine = create_async_engine(url, echo=False, connect_args=connect_args)
     return _engine
 
 

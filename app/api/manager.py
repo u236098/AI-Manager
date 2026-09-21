@@ -1,4 +1,4 @@
-"""Manager endpoints — daily briefs, weekly reviews, chat, recommendations."""
+"""Manager endpoints — daily briefs, weekly reviews, recommendations."""
 from datetime import date
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -33,8 +33,7 @@ async def todays_brief(creator_id: int = 1, db: AsyncSession = Depends(get_db)):
             "full_brief": brief.full_brief,
         }
 
-    from app.services.briefing import generate_daily_brief
-    return await generate_daily_brief(creator_id, db)
+    return {"message": "No brief for today yet. Run analysis to generate data."}
 
 
 @router.get("/brief/weekly")
@@ -57,19 +56,6 @@ async def latest_weekly_review(creator_id: int = 1, db: AsyncSession = Depends(g
         "continue_doing": review.continue_doing,
         "next_week_strategy": review.next_week_strategy,
     }
-
-
-class ChatMessage(BaseModel):
-    message: str
-
-
-@router.post("/chat")
-async def chat_with_manager(body: ChatMessage, creator_id: int = 1, db: AsyncSession = Depends(get_db)):
-    """Free-form conversation with the AI manager — routed through orchestration."""
-    from app.services.orchestrator import orchestrate
-    from app.services.briefing import _gather_brief_context
-    context = await _gather_brief_context(creator_id, db)
-    return await orchestrate(body.message, context, db, creator_id)
 
 
 @router.post("/analyze")

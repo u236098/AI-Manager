@@ -77,7 +77,6 @@ export const api = {
     weekly: () => fetchJSON<Record<string, unknown>>("/manager/brief/weekly"),
     memories: (creatorId?: number) => fetchJSON<Memory[]>(`/manager/memory?creator_id=${creatorId ?? 1}`),
     recommendations: (status?: string) => fetchJSON<Recommendation[]>(`/manager/recommendations?status=${status ?? "pending"}`),
-    chat: (message: string) => fetchJSON<Record<string, unknown>>("/manager/chat", { method: "POST", body: JSON.stringify({ message }) }),
     analyzeTikTok: (accountId: number) => fetchJSON<AnalyticsResult>(`/manager/analyze/full/${accountId}`, { method: "POST" }),
     analyzeInstagram: (accountId: number) => fetchJSON<AnalyticsResult>(`/manager/analyze/instagram/${accountId}`, { method: "POST" }),
     analyzeCrossPlatform: () => fetchJSON<Record<string, unknown>>("/manager/analyze/cross-platform", { method: "POST" }),
