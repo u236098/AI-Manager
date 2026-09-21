@@ -13,6 +13,7 @@ from app.mcp import mcp as mcp_server
 _mcp_http_app = mcp_server.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
+    host="0.0.0.0",
 )
 
 
