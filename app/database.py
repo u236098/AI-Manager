@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -21,7 +22,21 @@ def _get_engine():
             import ssl
             ssl_ctx = ssl.create_default_context()
             connect_args["ssl"] = ssl_ctx
-        _engine = create_async_engine(url, echo=False, connect_args=connect_args)
+        # Vercel functions can be frozen and resumed after Neon has closed an
+        # idle connection.  A process-local SQLAlchemy pool can then hand a
+        # dead asyncpg connection to the next request.  Use one connection per
+        # session in serverless; Neon remains responsible for pooling upstream.
+        is_vercel = bool(__import__("os").environ.get("VERCEL"))
+        engine_kwargs = {
+            "echo": False,
+            "connect_args": connect_args,
+            "pool_pre_ping": True,
+        }
+        if is_vercel:
+            engine_kwargs["poolclass"] = NullPool
+        else:
+            engine_kwargs["pool_recycle"] = 300
+        _engine = create_async_engine(url, **engine_kwargs)
     return _engine
 
 
