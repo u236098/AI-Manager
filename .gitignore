@@ -13,3 +13,4 @@ package-lock.json
 .neon
 .vercel
 .env*
+/docs/LOCAL_OPERATIONS.md
