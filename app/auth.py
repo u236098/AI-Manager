@@ -7,6 +7,7 @@ a valid Clerk Bearer token.
 from __future__ import annotations
 
 import contextvars
+import json
 import logging
 from functools import lru_cache
 
@@ -19,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 
 logger = logging.getLogger(__name__)
+
+MCP_SCOPES = ("openid", "profile", "email", "offline_access")
 
 creator_id_var: contextvars.ContextVar[int] = contextvars.ContextVar(
     "creator_id", default=0
@@ -45,12 +48,52 @@ def verify_clerk_token(token: str) -> dict:
     if client is None:
         raise ValueError("CLERK_JWKS_URL not configured")
     signing_key = client.get_signing_key_from_jwt(token)
+    from app.config import get_settings
+
+    issuer = get_settings().clerk_issuer_url
+    decode_kwargs = {
+        "algorithms": ["RS256"],
+        "options": {"verify_aud": False},
+    }
+    if issuer:
+        decode_kwargs["issuer"] = issuer
+
     return jwt.decode(
         token,
         signing_key.key,
-        algorithms=["RS256"],
-        options={"verify_aud": False},
+        **decode_kwargs,
     )
+
+
+def verify_mcp_token(token: str) -> dict:
+    """Verify a Clerk OAuth token issued for this MCP connection."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    if not settings.clerk_issuer_url:
+        raise ValueError("CLERK_ISSUER or CLERK_JWKS_URL is required for MCP OAuth")
+    claims = verify_clerk_token(token)
+
+    audiences = claims.get("aud") or []
+    if isinstance(audiences, str):
+        audiences = [audiences]
+
+    resource = claims.get("resource")
+    resource_values = [resource] if isinstance(resource, str) else (resource or [])
+    accepted_audiences = {
+        settings.canonical_mcp_resource_url,
+        settings.canonical_mcp_resource_url.rstrip("/"),
+        settings.mcp_oauth_client_id,
+    }
+    if not accepted_audiences.intersection({*audiences, *resource_values}):
+        raise ValueError("Token was not issued for the Kobby Manager MCP resource")
+
+    scope_claim = claims.get("scope", "")
+    token_scopes = set(scope_claim.split()) if isinstance(scope_claim, str) else set(scope_claim)
+    if "openid" not in token_scopes:
+        raise ValueError("Token is missing the required openid scope")
+
+    return claims
 
 
 async def _resolve_creator_id(clerk_user_id: str, db: AsyncSession) -> int | None:
@@ -109,20 +152,33 @@ class MCPAuthMiddleware:
             return await self.app(scope, receive, send)
 
         if not _auth_enabled():
-            creator_id_var.set(1)
-            return await self.app(scope, receive, send)
+            context_token = creator_id_var.set(1)
+            try:
+                return await self.app(scope, receive, send)
+            finally:
+                creator_id_var.reset(context_token)
 
         headers = dict(scope.get("headers", []))
         auth_value = headers.get(b"authorization", b"").decode()
 
         if not auth_value.startswith("Bearer "):
-            return await _send_error(send, 401, "Missing authorization token")
+            return await _send_error(
+                send,
+                401,
+                "Missing authorization token",
+                oauth_error="invalid_token",
+            )
 
         try:
-            claims = verify_clerk_token(auth_value[7:])
+            claims = verify_mcp_token(auth_value[7:])
         except Exception as e:
             logger.warning("MCP JWT verification failed: %s", e)
-            return await _send_error(send, 401, "Invalid authorization token")
+            return await _send_error(
+                send,
+                401,
+                "Invalid authorization token",
+                oauth_error="invalid_token",
+            )
 
         clerk_user_id = claims.get("sub")
         if not clerk_user_id:
@@ -134,17 +190,40 @@ class MCPAuthMiddleware:
         if cid is None:
             return await _send_error(send, 403, "User not associated with any creator")
 
-        creator_id_var.set(cid)
-        return await self.app(scope, receive, send)
+        context_token = creator_id_var.set(cid)
+        try:
+            return await self.app(scope, receive, send)
+        finally:
+            creator_id_var.reset(context_token)
 
 
-async def _send_error(send, status: int, message: str):
-    import json
+async def _send_error(
+    send,
+    status: int,
+    message: str,
+    oauth_error: str | None = None,
+):
+    from app.config import get_settings
+
     body = json.dumps({"error": message}).encode()
+    headers = [
+        [b"content-type", b"application/json"],
+        [b"content-length", str(len(body)).encode()],
+    ]
+    if oauth_error:
+        settings = get_settings()
+        metadata_url = f"{settings.base_url.rstrip('/')}/.well-known/oauth-protected-resource"
+        challenge = (
+            f'Bearer resource_metadata="{metadata_url}", '
+            f'scope="{" ".join(MCP_SCOPES)}", '
+            f'error="{oauth_error}", error_description="{message}"'
+        )
+        headers.append([b"www-authenticate", challenge.encode()])
+
     await send({
         "type": "http.response.start",
         "status": status,
-        "headers": [[b"content-type", b"application/json"]],
+        "headers": headers,
     })
     await send({
         "type": "http.response.body",

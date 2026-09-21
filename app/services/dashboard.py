@@ -416,12 +416,24 @@ async def get_top_posts(
     }
 
 
-async def get_post_details(db: AsyncSession, post_id: int) -> dict:
-    post = await db.get(Post, post_id)
-    if not post:
+async def get_post_details(
+    db: AsyncSession,
+    post_id: int,
+    creator_id: int = 1,
+) -> dict:
+    row = (
+        await db.execute(
+            select(Post, PlatformAccount)
+            .join(PlatformAccount, PlatformAccount.id == Post.account_id)
+            .where(
+                Post.id == post_id,
+                PlatformAccount.creator_id == creator_id,
+            )
+        )
+    ).one_or_none()
+    if not row:
         return {"error": f"Post {post_id} not found"}
-
-    account = await db.get(PlatformAccount, post.account_id)
+    post, account = row
 
     metrics_result = await db.execute(
         select(PostMetric)
@@ -434,6 +446,7 @@ async def get_post_details(db: AsyncSession, post_id: int) -> dict:
     observations = (
         await db.scalars(
             select(ManagerMemory).where(
+                ManagerMemory.creator_id == creator_id,
                 ManagerMemory.is_active == True,
                 ManagerMemory.evidence_post_ids.isnot(None),
             )

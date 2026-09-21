@@ -9,7 +9,8 @@ from app.models.core import Creator, PlatformAccount, Platform, Post, PostType, 
 from app.models.manager import ManagerMemory, KnowledgeType
 from app.services.dashboard import (
     get_creator_overview, get_accounts, get_recent_performance,
-    get_content_themes, get_top_posts, get_manager_memory, search_posts,
+    get_content_themes, get_top_posts, get_post_details, get_manager_memory,
+    search_posts,
 )
 
 
@@ -121,6 +122,14 @@ async def test_search_posts_isolated(multi_tenant_db):
     assert not any("Creator B" in c for c in captions)
 
 
+async def test_post_details_isolated(multi_tenant_db):
+    own_post = await get_post_details(multi_tenant_db, post_id=1, creator_id=1)
+    other_post = await get_post_details(multi_tenant_db, post_id=100, creator_id=1)
+
+    assert own_post["caption"] == "Creator A post 0"
+    assert other_post == {"error": "Post 100 not found"}
+
+
 async def test_manager_memory_isolated(multi_tenant_db):
     result_a = await get_manager_memory(multi_tenant_db, creator_id=1)
     result_b = await get_manager_memory(multi_tenant_db, creator_id=2)
@@ -160,7 +169,9 @@ async def test_clerk_user_id_uniqueness(multi_tenant_db):
 async def test_auth_disabled_returns_creator_1():
     """When CLERK_SECRET_KEY is empty, auth is disabled."""
     from app.auth import _auth_enabled
-    assert not _auth_enabled()
+    with patch("app.config.get_settings") as mock_settings:
+        mock_settings.return_value.clerk_secret_key = ""
+        assert not _auth_enabled()
 
 
 async def test_mcp_contextvar_default():

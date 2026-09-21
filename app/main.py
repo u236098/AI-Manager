@@ -52,6 +52,18 @@ mcp_asgi = StreamableHTTPASGIApp(mcp_server.session_manager)
 app.mount("/mcp", MCPAuthMiddleware(mcp_asgi, _get_session_factory()))
 
 
+@app.get("/.well-known/oauth-protected-resource")
+@app.get("/.well-known/oauth-protected-resource/mcp")
+async def mcp_protected_resource_metadata():
+    """RFC 9728 metadata used by ChatGPT to discover Clerk OAuth."""
+    return {
+        "resource": settings.canonical_mcp_resource_url,
+        "authorization_servers": [settings.clerk_issuer_url],
+        "scopes_supported": ["openid", "profile", "email", "offline_access"],
+        "resource_documentation": settings.base_url.rstrip("/"),
+    }
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}

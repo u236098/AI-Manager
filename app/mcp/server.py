@@ -18,6 +18,15 @@ READ_ONLY = ToolAnnotations(
     open_world_hint=False,
 )
 
+OAUTH_META = {
+    "securitySchemes": [
+        {
+            "type": "oauth2",
+            "scopes": ["openid", "profile", "email", "offline_access"],
+        }
+    ]
+}
+
 mcp = MCPServer(
     "Kobby Manager",
     instructions=(
@@ -44,7 +53,7 @@ def _cid() -> int:
     return creator_id_var.get() or 1
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def get_creator_overview() -> dict:
     """Return the creator's current account overview across Instagram
     and TikTok, including followers, post counts, top observations
@@ -55,7 +64,7 @@ async def get_creator_overview() -> dict:
         return await _get(db, creator_id=_cid())
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def get_accounts() -> dict:
     """Return connected social media accounts with follower counts and
     post totals. Never returns tokens or credentials."""
@@ -65,7 +74,7 @@ async def get_accounts() -> dict:
         return await _get(db, creator_id=_cid())
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def get_recent_performance(
     platform: str | None = None,
     days: int = 30,
@@ -82,7 +91,7 @@ async def get_recent_performance(
         return await _get(db, creator_id=_cid(), platform=platform, days=days)
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def get_content_themes(
     platform: str | None = None,
 ) -> dict:
@@ -98,7 +107,7 @@ async def get_content_themes(
         return await _get(db, creator_id=_cid(), platform=platform)
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def get_top_posts(
     platform: str | None = None,
     metric: str = "views",
@@ -124,7 +133,7 @@ async def get_top_posts(
         )
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def get_post_details(post_id: int) -> dict:
     """Return full details about a single post including metrics,
     content themes and related observations.
@@ -135,10 +144,10 @@ async def get_post_details(post_id: int) -> dict:
     from app.services.dashboard import get_post_details as _get
 
     async with get_db() as db:
-        return await _get(db, post_id)
+        return await _get(db, post_id, creator_id=_cid())
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def get_manager_memory(
     knowledge_type: str | None = None,
     platform: str | None = None,
@@ -161,7 +170,7 @@ async def get_manager_memory(
         )
 
 
-@mcp.tool(annotations=READ_ONLY)
+@mcp.tool(annotations=READ_ONLY, meta=OAUTH_META)
 async def search_posts(
     query: str | None = None,
     platform: str | None = None,

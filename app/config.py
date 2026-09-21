@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     clerk_secret_key: str = ""
     clerk_publishable_key: str = ""
     clerk_jwks_url: str = ""
+    clerk_issuer: str = ""
+
+    # ChatGPT MCP OAuth configuration. The resource URL must exactly match
+    # the public MCP endpoint used when creating the ChatGPT connection.
+    mcp_resource_url: str = ""
+    mcp_oauth_client_id: str = "https://chatgpt.com/oauth/client.json"
 
     # Comma-separated allowed CORS origins (production)
     allowed_origins: str = "http://localhost:3000,http://localhost:5173"
@@ -69,6 +75,23 @@ class Settings(BaseSettings):
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql://", 1)
         return url
+
+    @property
+    def clerk_issuer_url(self) -> str:
+        """Return Clerk's canonical OAuth/OIDC issuer URL."""
+        if self.clerk_issuer:
+            return self.clerk_issuer.rstrip("/")
+        marker = "/.well-known/"
+        if marker in self.clerk_jwks_url:
+            return self.clerk_jwks_url.split(marker, 1)[0].rstrip("/")
+        return ""
+
+    @property
+    def canonical_mcp_resource_url(self) -> str:
+        """Return the exact public MCP resource identifier."""
+        if self.mcp_resource_url:
+            return self.mcp_resource_url.rstrip("/") + "/"
+        return f"{self.base_url.rstrip('/')}/mcp/"
 
 
 @lru_cache
