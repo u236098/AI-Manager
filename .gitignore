@@ -8,3 +8,6 @@ build/
 node_modules/
 .ruff_cache/
 .mypy_cache/
+.neon/
+package-lock.json
+.neon

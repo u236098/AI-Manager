@@ -1,5 +1,23 @@
+from urllib.parse import urlparse, parse_qs, urlencode, urlunparse
+
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+ASYNCPG_STRIP_PARAMS = {"channel_binding", "sslmode"}
+
+
+def _clean_url_for_asyncpg(url: str) -> str:
+    """Strip query params that asyncpg doesn't understand and convert sslmode to ssl."""
+    parsed = urlparse(url)
+    if not parsed.query:
+        return url
+    params = parse_qs(parsed.query)
+    sslmode = params.pop("sslmode", [None])[0]
+    cleaned = {k: v for k, v in params.items() if k not in ASYNCPG_STRIP_PARAMS}
+    if sslmode and sslmode == "require":
+        cleaned["ssl"] = ["require"]
+    new_query = urlencode(cleaned, doseq=True)
+    return urlunparse(parsed._replace(query=new_query))
 
 
 class Settings(BaseSettings):
@@ -30,17 +48,17 @@ class Settings(BaseSettings):
     # Comma-separated allowed CORS origins (production)
     allowed_origins: str = "http://localhost:3000,http://localhost:5173"
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
     @property
     def async_database_url(self) -> str:
-        """Ensure the URL uses the asyncpg driver."""
+        """Ensure the URL uses the asyncpg driver and strip unsupported params."""
         url = self.database_url
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgresql://"):
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return url
+        return _clean_url_for_asyncpg(url)
 
     @property
     def sync_database_url(self) -> str:
