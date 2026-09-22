@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     tiktok_client_secret: str = ""
 
     secret_key: str = "change-me-in-production"
+    cron_secret: str = ""
     oauth_state_ttl_seconds: int = 600
 
     # Token encryption key (Fernet, 32-byte base64-encoded)

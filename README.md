@@ -177,6 +177,12 @@ The GitHub repository deploys the `mcp-production` branch to Vercel. The
 Python entry point is `api/index.py`; Vercel uses `requirements.txt` and
 `vercel.json`.
 
+Production also runs one protected account sync per day at 03:00 UTC. Vercel
+Hobby permits daily cron jobs at no additional cron charge, although function
+usage and third-party API quotas still apply. Instagram per-post insight
+enrichment is intentionally manual because it makes one provider request per
+post.
+
 For a manual deployment:
 
 ```bash

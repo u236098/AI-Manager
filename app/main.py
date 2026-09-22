@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mcp.server.streamable_http_manager import StreamableHTTPASGIApp
 
-from app.api import auth, accounts, posts, analytics, content, manager, brand, dashboard
+from app.api import auth, accounts, posts, analytics, content, manager, brand, dashboard, cron
 from app.auth import MCPAuthMiddleware
 from app.config import get_settings
 from app.database import _get_session_factory
@@ -47,6 +47,7 @@ app.include_router(content.router, prefix="/api/content", tags=["content"])
 app.include_router(manager.router, prefix="/api/manager", tags=["manager"])
 app.include_router(brand.router, prefix="/api/brand", tags=["brand"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
+app.include_router(cron.router, prefix="/api/cron", tags=["cron"])
 
 mcp_asgi = StreamableHTTPASGIApp(mcp_server.session_manager)
 app.mount("/mcp", MCPAuthMiddleware(mcp_asgi, _get_session_factory()))
