@@ -25,6 +25,7 @@ ALLOWED_METRICS = {
     "shares",
     "saves",
     "follows",
+    "follow_rate",
     "profile_visits",
     "engagement_rate",
     "comments",
@@ -347,6 +348,11 @@ async def get_top_posts(
         "comments": PostMetric.comments_count,
     }
 
+    follow_rate_expr = (
+        func.coalesce(PostMetric.followers_from_post, 0) * 1.0
+        / func.nullif(PostMetric.views, 0)
+    )
+
     query = (
         select(Post, PostMetric, PlatformAccount.platform, PlatformAccount.username)
         .join(PostMetric, PostMetric.post_id == Post.id)
@@ -368,6 +374,8 @@ async def get_top_posts(
                 * 1.0 / PostMetric.views
             ).desc()
         )
+    elif metric == "follow_rate":
+        query = query.where(PostMetric.views > 0).order_by(follow_rate_expr.desc())
     else:
         col = metric_col_map[metric]
         query = query.order_by(col.desc().nulls_last())
@@ -395,6 +403,13 @@ async def get_top_posts(
             "followers_from_post": pm.followers_from_post,
             "profile_visits": pm.profile_visits_from_post,
         }
+
+        if pm.views and pm.views > 0:
+            row["follow_rate"] = round(
+                (pm.followers_from_post or 0) / pm.views, 6
+            )
+        else:
+            row["follow_rate"] = None
 
         if pm.views and pm.views > 0:
             eng = (pm.likes or 0) + (pm.comments_count or 0) + (pm.shares or 0)
@@ -489,6 +504,13 @@ async def get_post_details(
             "shares": latest_metric.shares,
             "saves": latest_metric.saves,
             "followers_from_post": latest_metric.followers_from_post,
+            "follow_rate": (
+                round(latest_metric.followers_from_post / latest_metric.views, 6)
+                if latest_metric.followers_from_post is not None
+                and latest_metric.views
+                and latest_metric.views > 0
+                else None
+            ),
             "profile_visits": latest_metric.profile_visits_from_post,
             "avg_watch_time": latest_metric.avg_watch_time_seconds,
             "retention_rate": latest_metric.retention_rate,
@@ -566,6 +588,11 @@ async def search_posts(
             "shares": pm.shares,
             "comments": pm.comments_count,
             "followers_from_post": pm.followers_from_post,
+            "follow_rate": (
+                round((pm.followers_from_post or 0) / pm.views, 6)
+                if pm.views and pm.views > 0
+                else None
+            ),
         })
 
         if len(posts) >= limit:

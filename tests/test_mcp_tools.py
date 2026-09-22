@@ -245,6 +245,14 @@ class TestGetTopPosts:
         result = await get_top_posts(mcp_db, metric="follows", limit=3)
         assert "posts" in result
 
+    async def test_returns_posts_by_follow_rate(self, mcp_db):
+        from app.services.dashboard import get_top_posts
+        result = await get_top_posts(mcp_db, metric="follow_rate", limit=3)
+        assert "posts" in result
+        rates = [p["follow_rate"] for p in result["posts"]]
+        assert rates == sorted(rates, reverse=True)
+        assert all("followers_from_post" in p for p in result["posts"])
+
     async def test_rejects_invalid_metric(self, mcp_db):
         from app.services.dashboard import get_top_posts
         result = await get_top_posts(mcp_db, metric="DROP TABLE posts")
