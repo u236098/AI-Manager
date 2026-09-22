@@ -199,6 +199,17 @@ This can take longer than a normal sync and Meta may reject insights for older
 posts or posts whose account type/API eligibility has changed. A failed insight
 request does not delete the post or its existing metrics.
 
+For a manual all-account run, use `scripts/sync_all_accounts.py` with a
+short-lived Clerk JWT supplied through the shell environment:
+
+```bash
+export KOBBY_CLERK_TOKEN='your-short-lived-clerk-jwt'
+python scripts/sync_all_accounts.py
+```
+
+Use `--skip-insights` when only the Instagram/TikTok account sync is needed.
+Never put the token in the script or commit it.
+
 For a manual deployment:
 
 ```bash
