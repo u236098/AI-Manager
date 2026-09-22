@@ -183,6 +183,22 @@ usage and third-party API quotas still apply. Instagram per-post insight
 enrichment is intentionally manual because it makes one provider request per
 post.
 
+### Manual Instagram insight enrichment
+
+After syncing an Instagram account, use the Accounts page's **Enrich
+Insights** action. This requests available per-post reach, views, saves,
+shares, profile visits, and follower-attribution metrics from Meta.
+
+The API equivalent is:
+
+```text
+POST /api/accounts/{instagram_account_id}/enrich-insights
+```
+
+This can take longer than a normal sync and Meta may reject insights for older
+posts or posts whose account type/API eligibility has changed. A failed insight
+request does not delete the post or its existing metrics.
+
 For a manual deployment:
 
 ```bash
