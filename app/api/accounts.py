@@ -1,5 +1,5 @@
 """Account management endpoints."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -8,6 +8,19 @@ from app.models.core import PlatformAccount, ProfileSnapshot
 from app.services.sync import sync_account, enrich_ig_insights
 
 router = APIRouter()
+
+
+async def _owned_account(account_id: int, creator_id: int, db: AsyncSession) -> PlatformAccount:
+    account = await db.scalar(
+        select(PlatformAccount).where(
+            PlatformAccount.id == account_id,
+            PlatformAccount.creator_id == creator_id,
+            PlatformAccount.is_active == True,
+        )
+    )
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    return account
 
 
 @router.get("/")
@@ -32,17 +45,32 @@ async def list_accounts(creator_id: int = Depends(get_creator_id), db: AsyncSess
 
 
 @router.post("/{account_id}/sync")
-async def sync_account_endpoint(account_id: int, db: AsyncSession = Depends(get_db)):
+async def sync_account_endpoint(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
+    await _owned_account(account_id, creator_id, db)
     return await sync_account(account_id, db)
 
 
 @router.post("/{account_id}/enrich-insights")
-async def enrich_insights_endpoint(account_id: int, db: AsyncSession = Depends(get_db)):
+async def enrich_insights_endpoint(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
+    await _owned_account(account_id, creator_id, db)
     return await enrich_ig_insights(account_id, db)
 
 
 @router.get("/{account_id}/profile-history")
-async def profile_history(account_id: int, db: AsyncSession = Depends(get_db)):
+async def profile_history(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
+    await _owned_account(account_id, creator_id, db)
     result = await db.execute(
         select(ProfileSnapshot)
         .where(ProfileSnapshot.account_id == account_id)

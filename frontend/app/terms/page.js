@@ -10,13 +10,13 @@ export default function Terms() {
       <p><strong>Last updated:</strong> 9 September 2026</p>
 
       <p>
-        These terms govern the use of Kobby Manager (&quot;the App&quot;), a personal AI
-        talent-management tool created by Kobby Cooper.
+        These terms govern the use of Kobby Manager (&quot;the App&quot;), a personal creator
+        analytics and performance-management service created by Kobby Cooper.
       </p>
 
       <h2>1. Description of Service</h2>
       <p>
-        Kobby Manager is a self-hosted application that connects to social-media platform APIs
+        Kobby Manager is an application that connects to social-media platform APIs
         (TikTok, Instagram) to retrieve public account data and analyse content performance.
         It generates recommendations, briefs, and reports to assist the account owner in
         managing their creator presence.
@@ -44,8 +44,8 @@ export default function Terms() {
       <h2>4. Data Handling</h2>
       <p>
         All data accessed through the App is handled in accordance with our{" "}
-        <a href="/privacy">Privacy Policy</a>. Data is stored locally and is not shared
-        with third parties.
+        <a href="/privacy">Privacy Policy</a>. Data is stored in managed application
+        infrastructure and is not sold or used for advertising profiles.
       </p>
 
       <h2>5. No Warranty</h2>

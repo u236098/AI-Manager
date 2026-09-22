@@ -10,7 +10,7 @@ export default function Privacy() {
       <p><strong>Last updated:</strong> 9 September 2026</p>
 
       <p>
-        Kobby Manager (&quot;the App&quot;) is a personal AI talent-management tool built by
+        Kobby Manager (&quot;the App&quot;) is a personal creator analytics and performance-management service built by
         Kobby Cooper (&quot;we&quot;, &quot;us&quot;) for managing his own creator accounts.
         This policy explains what data the App accesses, how it is used, and how it is stored.
       </p>
@@ -36,27 +36,29 @@ export default function Privacy() {
         <li>Produce daily and weekly management briefs</li>
       </ul>
       <p>
-        Data is processed locally on the account owner&apos;s own machine. It is <strong>not</strong> sold,
-        shared with third parties, used for advertising, or transmitted to any external service
-        beyond the AI model APIs required for analysis (Anthropic, OpenAI).
+        Data is processed for the account owner through the Kobby Manager backend and stored in
+        its managed PostgreSQL database. It is <strong>not</strong> sold, shared for advertising,
+        or used to build advertising profiles. The service sends requests only to the connected
+        social-platform APIs and the infrastructure required to operate the application.
       </p>
 
       <h2>3. Data Storage</h2>
       <p>
-        All data is stored in a local PostgreSQL database on the account owner&apos;s machine.
-        No data is stored on public servers or cloud infrastructure. Access tokens are stored
-        locally and encrypted at rest via the operating system&apos;s security mechanisms.
+        Data is stored in a managed PostgreSQL database. Platform access and refresh tokens are
+        encrypted with an application-managed Fernet key before storage. Database credentials,
+        encryption keys, and provider secrets are kept in environment-based secret storage and
+        are not returned by the API or MCP tools.
       </p>
 
       <h2>4. Data Retention</h2>
       <p>
-        Data is retained locally for as long as the account owner chooses to use the App.
+        Data is retained in managed application infrastructure for as long as the account owner chooses to use the App.
         Historical metrics are kept to enable long-term trend analysis.
       </p>
 
       <h2>5. Data Deletion</h2>
       <p>
-        The account owner can delete all stored data at any time by removing the local database.
+        The account owner can request deletion of all stored data at any time through the service owner.
         To disconnect a platform account and delete its stored data, the owner can use the
         App&apos;s account management interface or delete the corresponding database records directly.
       </p>

@@ -118,7 +118,7 @@ export function PerformanceChart({ data }: Props) {
               color: "#fff",
               fontSize: "12px",
             }}
-            formatter={(value: number) => [formatNumber(value), ""]}
+            formatter={(value: unknown) => [formatNumber(Number(value ?? 0)), ""]}
           />
           <Area
             type="monotone"

@@ -8,6 +8,7 @@ import { ManagerBrief } from "@/components/manager-brief";
 import { TopPosts } from "@/components/top-posts";
 import { MessageSquare } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
@@ -26,6 +27,7 @@ function getGreeting() {
 
 export default function Overview() {
   const [chatInput, setChatInput] = useState("");
+  const router = useRouter();
 
   const { data: overview, isLoading: loadingOverview } = useQuery({
     queryKey: ["dashboard-overview"],
@@ -85,7 +87,7 @@ export default function Overview() {
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && chatInput.trim()) {
-                window.location.href = `/manager?q=${encodeURIComponent(chatInput)}`;
+                router.push(`/manager?q=${encodeURIComponent(chatInput)}`);
               }
             }}
           />

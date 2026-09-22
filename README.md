@@ -236,3 +236,52 @@ MCP tools for current values.
 - Use separate provider and Clerk credentials for development and production.
 - Keep MCP tools read-only until write-tool authorization and audit logging are
   designed and tested.
+
+### Security controls and rationale
+
+- **TLS and edge hosting:** Production traffic terminates over HTTPS at Vercel.
+  Local HTTP is only for development.
+- **Clerk authentication:** Protected REST routes use a Clerk JWT dependency;
+  MCP requests use an OAuth resource challenge and validate JWT signature,
+  issuer, resource/audience, expiry, and required scopes. This prevents an
+  arbitrary caller from querying the service.
+- **Creator isolation:** Every account, post, metric, recommendation, and
+  analysis query is scoped through the authenticated Clerk subject and its
+  `creators.clerk_user_id` mapping. Numeric IDs are never treated as proof of
+  ownership.
+- **OAuth CSRF and replay protection:** Platform OAuth uses HMAC-signed,
+  time-limited state values. Transaction state, provider, creator, and PKCE
+  verifier are stored server-side and consumed once. TikTok and ChatGPT use
+  PKCE to protect authorization codes.
+- **Token encryption:** Instagram and TikTok access/refresh tokens are encrypted
+  with Fernet before database storage. The encryption key exists only in secret
+  storage and is never returned by REST or MCP responses.
+- **Cron authentication:** The daily synchronization route requires the
+  Vercel-provided `Authorization: Bearer $CRON_SECRET` value. It is not a
+  public sync endpoint.
+- **Database safety:** Queries use SQLAlchemy expressions and bound parameters;
+  no user value is concatenated into SQL. Vercel uses serverless-safe database
+  connections to avoid stale Neon sessions.
+- **MCP boundary:** MCP tools are stateless, read-only, creator-scoped, and
+  annotated as non-destructive. ChatGPT cannot write to the database through
+  the current tool set.
+- **Output minimization:** Tool responses omit platform tokens, refresh tokens,
+  provider secrets, and other credential fields. Captions and metrics are
+  returned only for the authenticated creator.
+- **Production diagnostics:** FastAPI's interactive docs are disabled on the
+  public Vercel deployment and remain available locally for development.
+- **CORS:** Browser origins are configured from `ALLOWED_ORIGINS`; CORS is not
+  used as authentication.
+
+### Security limitations and operational requirements
+
+- Platform providers may omit per-post TikTok follower attribution; missing
+  values are represented as unavailable, not zero.
+- Instagram insight enrichment can fail for older posts or posts no longer
+  eligible for the provider's insights API.
+- The dashboard source exists separately from the deployed FastAPI/MCP service;
+  any future public dashboard must add a Clerk browser integration before it is
+  exposed.
+- Dependencies must be updated and tested regularly. Production logs should be
+  checked for failed cron runs, token errors, database connection failures, and
+  unexpected 4xx/5xx responses.

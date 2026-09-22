@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -28,6 +29,12 @@ app = FastAPI(
     description="Deterministic analytics platform for Kobby Cooper",
     version="0.3.0",
     lifespan=lifespan,
+    # Interactive OpenAPI endpoints are useful locally but disclose route
+    # details in production. Vercel's environment flag keeps them disabled
+    # on the public deployment.
+    docs_url=None if os.environ.get("VERCEL") else "/docs",
+    redoc_url=None if os.environ.get("VERCEL") else "/redoc",
+    openapi_url=None if os.environ.get("VERCEL") else "/openapi.json",
 )
 
 settings = get_settings()

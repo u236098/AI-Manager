@@ -1,9 +1,10 @@
 """Post management endpoints."""
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
-from app.models.core import Post
+from app.auth import get_creator_id
+from app.models.core import PlatformAccount, Post
 
 router = APIRouter()
 
@@ -13,9 +14,17 @@ async def list_posts(
     account_id: int | None = None,
     limit: int = 50,
     offset: int = 0,
+    creator_id: int = Depends(get_creator_id),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Post).order_by(Post.published_at.desc()).offset(offset).limit(limit)
+    query = (
+        select(Post)
+        .join(PlatformAccount, PlatformAccount.id == Post.account_id)
+        .where(PlatformAccount.creator_id == creator_id)
+        .order_by(Post.published_at.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     if account_id:
         query = query.where(Post.account_id == account_id)
     result = await db.execute(query)
@@ -36,8 +45,16 @@ async def list_posts(
 
 
 @router.get("/{post_id}")
-async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
-    post = await db.get(Post, post_id)
+async def get_post(
+    post_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
+    post = await db.scalar(
+        select(Post)
+        .join(PlatformAccount, PlatformAccount.id == Post.account_id)
+        .where(Post.id == post_id, PlatformAccount.creator_id == creator_id)
+    )
     if not post:
         from fastapi import HTTPException
         raise HTTPException(404, "Post not found")
@@ -52,5 +69,4 @@ async def get_post(post_id: int, db: AsyncSession = Depends(get_db)):
         "series_id": post.series_id,
         "series_episode": post.series_episode,
     }
-
 

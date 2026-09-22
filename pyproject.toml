@@ -1,7 +1,7 @@
 [project]
 name = "kobby-manager"
 version = "0.1.0"
-description = "AI Talent Manager for Kobby Cooper"
+description = "Creator analytics and performance management for Kobby Cooper"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

@@ -9,6 +9,7 @@ from app.auth import get_creator_id
 from app.models.manager import (
     DailyBrief, WeeklyReview, Recommendation, ManagerMemory, ManagerConfig,
 )
+from app.models.core import PlatformAccount
 
 router = APIRouter()
 
@@ -67,16 +68,42 @@ async def run_analysis(creator_id: int = Depends(get_creator_id), db: AsyncSessi
 
 
 @router.post("/analyze/full/{account_id}")
-async def run_full_analysis(account_id: int, db: AsyncSession = Depends(get_db)):
+async def run_full_analysis(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
     """Comprehensive first-run analytics for a real account with outlier detection."""
+    from fastapi import HTTPException
     from app.services.analysis import run_full_analytics
+    account = await db.scalar(
+        select(PlatformAccount).where(
+            PlatformAccount.id == account_id,
+            PlatformAccount.creator_id == creator_id,
+        )
+    )
+    if not account:
+        raise HTTPException(404, "Account not found")
     return await run_full_analytics(account_id, db)
 
 
 @router.post("/analyze/instagram/{account_id}")
-async def run_ig_analysis(account_id: int, db: AsyncSession = Depends(get_db)):
+async def run_ig_analysis(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
     """Instagram analytics — format-segmented, likes-based."""
+    from fastapi import HTTPException
     from app.services.analysis import run_ig_analytics
+    account = await db.scalar(
+        select(PlatformAccount).where(
+            PlatformAccount.id == account_id,
+            PlatformAccount.creator_id == creator_id,
+        )
+    )
+    if not account:
+        raise HTTPException(404, "Account not found")
     return await run_ig_analytics(account_id, db)
 
 
@@ -132,9 +159,15 @@ class RecommendationDecision(BaseModel):
 async def decide_recommendation(
     rec_id: int,
     body: RecommendationDecision,
+    creator_id: int = Depends(get_creator_id),
     db: AsyncSession = Depends(get_db),
 ):
-    rec = await db.get(Recommendation, rec_id)
+    rec = await db.scalar(
+        select(Recommendation).where(
+            Recommendation.id == rec_id,
+            Recommendation.creator_id == creator_id,
+        )
+    )
     if not rec:
         from fastapi import HTTPException
         raise HTTPException(404, "Recommendation not found")
@@ -155,10 +188,20 @@ class ScoreOutcome(BaseModel):
 async def score_recommendation_endpoint(
     rec_id: int,
     body: ScoreOutcome,
+    creator_id: int = Depends(get_creator_id),
     db: AsyncSession = Depends(get_db),
 ):
     """Score a recommendation against actual outcome data."""
     from app.services.analysis import score_recommendation
+    rec = await db.scalar(
+        select(Recommendation).where(
+            Recommendation.id == rec_id,
+            Recommendation.creator_id == creator_id,
+        )
+    )
+    if not rec:
+        from fastapi import HTTPException
+        raise HTTPException(404, "Recommendation not found")
     rec = await score_recommendation(
         rec_id, db, body.outcome_metrics, body.baseline_metrics, body.objective,
     )

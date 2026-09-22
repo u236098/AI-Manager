@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.auth import get_creator_id
 from app.models.brand import BrandStrategy, ProfileScore, ProfileExperiment, PinRecommendation
+from app.models.core import PlatformAccount
 
 router = APIRouter()
 
@@ -32,10 +33,18 @@ async def get_strategy(creator_id: int = Depends(get_creator_id), db: AsyncSessi
 
 
 @router.get("/profile-scores/{account_id}")
-async def profile_scores(account_id: int, db: AsyncSession = Depends(get_db)):
+async def profile_scores(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
     result = await db.execute(
         select(ProfileScore)
-        .where(ProfileScore.account_id == account_id)
+        .join(PlatformAccount, PlatformAccount.id == ProfileScore.account_id)
+        .where(
+            ProfileScore.account_id == account_id,
+            PlatformAccount.creator_id == creator_id,
+        )
         .order_by(ProfileScore.scored_at.desc())
         .limit(10)
     )
@@ -57,10 +66,18 @@ async def profile_scores(account_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/pin-recommendations/{account_id}")
-async def pin_recommendations(account_id: int, db: AsyncSession = Depends(get_db)):
+async def pin_recommendations(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
     result = await db.execute(
         select(PinRecommendation)
-        .where(PinRecommendation.account_id == account_id)
+        .join(PlatformAccount, PlatformAccount.id == PinRecommendation.account_id)
+        .where(
+            PinRecommendation.account_id == account_id,
+            PlatformAccount.creator_id == creator_id,
+        )
         .order_by(PinRecommendation.recommended_at.desc())
         .limit(5)
     )

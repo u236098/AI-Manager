@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Kobby Manager",
-  description: "AI Talent Manager for Kobby Cooper",
+  description: "Creator analytics and performance management for Kobby Cooper",
 };
 
 export default function RootLayout({ children }) {

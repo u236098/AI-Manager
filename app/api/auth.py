@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
+from app.auth import get_creator_id
 from app.services.oauth_session import pop_oauth_session, put_oauth_session
 from app.services.oauth_state import generate_state, validate_state
 
@@ -24,7 +25,7 @@ def _redirect_uri(provider: str) -> str:
 
 @router.get("/instagram/connect")
 async def instagram_auth_url(
-    creator_id: int = Query(..., ge=1),
+    creator_id: int = Depends(get_creator_id),
     db: AsyncSession = Depends(get_db),
 ):
     """Build Meta's current Facebook Login for Business Instagram onboarding URL."""
@@ -111,7 +112,7 @@ async def instagram_complete(payload: InstagramComplete, db: AsyncSession = Depe
 
 @router.get("/tiktok/connect")
 async def tiktok_auth_url(
-    creator_id: int = Query(..., ge=1),
+    creator_id: int = Depends(get_creator_id),
     db: AsyncSession = Depends(get_db),
 ):
     """Build TikTok Desktop OAuth URL using PKCE as required by the sandbox setup."""

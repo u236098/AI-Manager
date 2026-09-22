@@ -5,7 +5,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.auth import get_creator_id
-from app.models.core import AccountMetricSnapshot, PostMetric
+from app.models.core import AccountMetricSnapshot, PostMetric, Post, PlatformAccount
 from app.models.analytics import Experiment, PostingTimeAnalysis
 
 router = APIRouter()
@@ -16,11 +16,16 @@ async def account_metrics(
     account_id: int,
     start: date | None = None,
     end: date | None = None,
+    creator_id: int = Depends(get_creator_id),
     db: AsyncSession = Depends(get_db),
 ):
     query = (
         select(AccountMetricSnapshot)
-        .where(AccountMetricSnapshot.account_id == account_id)
+        .join(PlatformAccount, PlatformAccount.id == AccountMetricSnapshot.account_id)
+        .where(
+            AccountMetricSnapshot.account_id == account_id,
+            PlatformAccount.creator_id == creator_id,
+        )
         .order_by(AccountMetricSnapshot.date.desc())
     )
     if start:
@@ -43,10 +48,19 @@ async def account_metrics(
 
 
 @router.get("/post/{post_id}/metrics")
-async def post_metrics(post_id: int, db: AsyncSession = Depends(get_db)):
+async def post_metrics(
+    post_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
     result = await db.execute(
         select(PostMetric)
-        .where(PostMetric.post_id == post_id)
+        .join(Post, Post.id == PostMetric.post_id)
+        .join(PlatformAccount, PlatformAccount.id == Post.account_id)
+        .where(
+            PostMetric.post_id == post_id,
+            PlatformAccount.creator_id == creator_id,
+        )
         .order_by(PostMetric.captured_at)
     )
     metrics = result.scalars().all()
@@ -89,9 +103,18 @@ async def list_experiments(creator_id: int = Depends(get_creator_id), db: AsyncS
 
 
 @router.get("/posting-times/{account_id}")
-async def posting_time_analysis(account_id: int, db: AsyncSession = Depends(get_db)):
+async def posting_time_analysis(
+    account_id: int,
+    creator_id: int = Depends(get_creator_id),
+    db: AsyncSession = Depends(get_db),
+):
     result = await db.execute(
-        select(PostingTimeAnalysis).where(PostingTimeAnalysis.account_id == account_id)
+        select(PostingTimeAnalysis)
+        .join(PlatformAccount, PlatformAccount.id == PostingTimeAnalysis.account_id)
+        .where(
+            PostingTimeAnalysis.account_id == account_id,
+            PlatformAccount.creator_id == creator_id,
+        )
     )
     analysis = result.scalars().all()
     return [

@@ -27,6 +27,31 @@ interface PostWithMetrics {
 
 type SortKey = "published_at" | "reach" | "views" | "likes" | "saves" | "shares";
 
+function SortHeader({
+  label,
+  field,
+  activeField,
+  descending,
+  onToggle,
+}: {
+  label: string;
+  field: SortKey;
+  activeField: SortKey;
+  descending: boolean;
+  onToggle: (field: SortKey) => void;
+}) {
+  return (
+    <button
+      onClick={() => onToggle(field)}
+      className="flex items-center gap-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+      aria-label={`Sort by ${label}${activeField === field ? (descending ? ", descending" : ", ascending") : ""}`}
+    >
+      {label}
+      <ArrowUpDown size={12} className={activeField === field ? "text-accent" : ""} />
+    </button>
+  );
+}
+
 function fmt(n: number | null) {
   if (n == null) return "-";
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -71,18 +96,6 @@ export default function PostsPage() {
     }
   }
 
-  function SortHeader({ label, field }: { label: string; field: SortKey }) {
-    return (
-      <button
-        onClick={() => toggleSort(field)}
-        className="flex items-center gap-1 text-xs font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-      >
-        {label}
-        <ArrowUpDown size={12} className={sortKey === field ? "text-accent" : ""} />
-      </button>
-    );
-  }
-
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -122,22 +135,22 @@ export default function PostsPage() {
                   </span>
                 </th>
                 <th className="text-left px-4 py-3">
-                  <SortHeader label="Date" field="published_at" />
+                  <SortHeader label="Date" field="published_at" activeField={sortKey} descending={sortDesc} onToggle={toggleSort} />
                 </th>
                 <th className="text-right px-4 py-3">
-                  <SortHeader label="Reach" field="reach" />
+                  <SortHeader label="Reach" field="reach" activeField={sortKey} descending={sortDesc} onToggle={toggleSort} />
                 </th>
                 <th className="text-right px-4 py-3">
-                  <SortHeader label="Views" field="views" />
+                  <SortHeader label="Views" field="views" activeField={sortKey} descending={sortDesc} onToggle={toggleSort} />
                 </th>
                 <th className="text-right px-4 py-3">
-                  <SortHeader label="Likes" field="likes" />
+                  <SortHeader label="Likes" field="likes" activeField={sortKey} descending={sortDesc} onToggle={toggleSort} />
                 </th>
                 <th className="text-right px-4 py-3">
-                  <SortHeader label="Saves" field="saves" />
+                  <SortHeader label="Saves" field="saves" activeField={sortKey} descending={sortDesc} onToggle={toggleSort} />
                 </th>
                 <th className="text-right px-4 py-3">
-                  <SortHeader label="Shares" field="shares" />
+                  <SortHeader label="Shares" field="shares" activeField={sortKey} descending={sortDesc} onToggle={toggleSort} />
                 </th>
               </tr>
             </thead>

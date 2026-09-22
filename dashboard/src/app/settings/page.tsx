@@ -42,9 +42,10 @@ export default function SettingsPage() {
       </div>
 
       <div className="bg-card rounded-xl border border-border p-5">
-        <h3 className="font-semibold mb-4">AI Provider</h3>
+        <h3 className="font-semibold mb-4">Analytics engine</h3>
         <p className="text-sm text-muted-foreground">
-          OpenAI (GPT-5.6 Sol / Terra / Luna)
+          Deterministic performance analysis with evidence-backed observations
+          and hypotheses. ChatGPT connects separately through the MCP tools.
         </p>
       </div>
     </div>
