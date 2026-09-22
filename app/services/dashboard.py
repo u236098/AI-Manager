@@ -375,9 +375,15 @@ async def get_top_posts(
             ).desc()
         )
     elif metric == "follow_rate":
-        query = query.where(PostMetric.views > 0).order_by(follow_rate_expr.desc())
+        query = query.where(
+            PostMetric.views > 0,
+            PostMetric.followers_from_post.is_not(None),
+        ).order_by(follow_rate_expr.desc())
     else:
         col = metric_col_map[metric]
+        if metric == "follows":
+            # Missing attribution is not the same as zero followers gained.
+            query = query.where(col.is_not(None))
         query = query.order_by(col.desc().nulls_last())
 
     query = query.limit(limit)
@@ -404,9 +410,13 @@ async def get_top_posts(
             "profile_visits": pm.profile_visits_from_post,
         }
 
-        if pm.views and pm.views > 0:
+        if (
+            pm.views
+            and pm.views > 0
+            and pm.followers_from_post is not None
+        ):
             row["follow_rate"] = round(
-                (pm.followers_from_post or 0) / pm.views, 6
+                pm.followers_from_post / pm.views, 6
             )
         else:
             row["follow_rate"] = None

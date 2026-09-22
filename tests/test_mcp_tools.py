@@ -253,6 +253,22 @@ class TestGetTopPosts:
         assert rates == sorted(rates, reverse=True)
         assert all("followers_from_post" in p for p in result["posts"])
 
+    async def test_missing_follow_attribution_is_not_zero(self, mcp_db):
+        from sqlalchemy import update
+        from app.models.core import PostMetric
+        from app.services.dashboard import get_top_posts
+
+        await mcp_db.execute(
+            update(PostMetric)
+            .where(PostMetric.post_id == 1)
+            .values(followers_from_post=None)
+        )
+        await mcp_db.commit()
+
+        result = await get_top_posts(mcp_db, metric="follow_rate", limit=50)
+        assert all(p["followers_from_post"] is not None for p in result["posts"])
+        assert all(p["follow_rate"] is not None for p in result["posts"])
+
     async def test_rejects_invalid_metric(self, mcp_db):
         from app.services.dashboard import get_top_posts
         result = await get_top_posts(mcp_db, metric="DROP TABLE posts")

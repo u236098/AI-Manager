@@ -120,6 +120,8 @@ async def get_top_posts(
         platform: Filter to 'instagram' or 'tiktok'. Omit for both.
         metric: One of views, reach, likes, shares, saves, follows,
                 follow_rate, profile_visits, engagement_rate, comments.
+                Posts with unavailable follower attribution are excluded
+                from follows and follow_rate rankings.
         limit: Number of posts to return (1-50, default 10).
         content_theme: Filter to a specific content theme like
                        'lifestyle', 'calisthenics', 'workout_routine'.
